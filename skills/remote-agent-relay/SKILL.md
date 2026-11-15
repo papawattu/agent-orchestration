@@ -25,6 +25,14 @@ env var). The user pings the Hermes agent to *relay* — get the agent's status
 and, when asked, hand it a short instruction. The task is NOT attached; it is
 read and steered through tmux over ssh.
 
+**Two modes** (set `orchestrator:` in `config.yaml`, or `AGENT_ORCHESTRATOR`):
+- **`remote`** (default) — orchestrator on a *different* host; every action is
+  an ssh round-trip to the remote's tmux. Use `scripts/ssh_safe_send.py` for
+  briefs (base64 path, because of the nested-ssh quoting trap).
+- **`local`** (tmux-only) — orchestrator on the *same* host as the agents, in
+  its own tmux window. No ssh, no base64, no quoting traps. Use
+  `scripts/tmux_local.sh` and see `references/tmux-local-mode.md`.
+
 This skill is **product-agnostic**: it does not assume any particular agent
 name. The roles are:
 - **build agent** — the pane that builds / writes code / opens PRs.
@@ -231,6 +239,27 @@ Watch for:
 When the context budget is ~80% consumed, the build agent should be stopped
 and a **fresh pane** started for the next slice (the "fresh builder" pattern).
 This is an owner decision — flag it, don't auto-restart the pane.
+
+## Tmux-Only Mode (orchestrator: local)
+
+When the orchestrator and the agents run on the **same host** (set
+`orchestrator: local` in `config.yaml`), drive the panes with plain local
+`tmux` — no ssh, no base64, no quoting traps. Use `scripts/tmux_local.sh`
+and `references/tmux-local-mode.md`. The key differences from the default
+ssh+tmux mode:
+
+- **Send a brief** — `tmux_local.sh send build "…"`. Local `send-keys -l`
+  takes the literal argument verbatim, so Unicode is safe (no base64 hop).
+- **Read a pane** — `tmux_local.sh status build` / `tmux_local.sh back build 200`.
+- **Tee the builder's output** — `tmux_local.sh pipeon build /tmp/build.log`
+  (and `pipeoff` to stop). Tail the file instead of polling `capture-pane`.
+- **Target by window name** (`build`, `review`, `main:build.0`) — immune to
+  pane-index churn.
+- **Optional dedicated socket** — `tmux -L agents` for isolation; set
+  `TMUX_LOCAL_SESSION` in the helper to match the session name.
+
+The build→review→fix loop, the owner gate, and the self-merge detection are
+identical in both modes — only the transport (ssh vs local tmux) differs.
 
 ## Pitfalls
 

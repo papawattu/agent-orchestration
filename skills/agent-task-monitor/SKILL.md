@@ -34,9 +34,14 @@ unless the user explicitly asks you to answer a prompt.
 
 ## Prerequisites
 
-- SSH reachability to `ssh_target` (key-based; no prompt). Set it in
-  `config.yaml` (`ssh_target: user@host`) or the `AGENTSSH_TARGET` env var.
-- A tmux session on the remote host (default `main`) with a window running the
+- **ssh+tmux mode** (default, `orchestrator: remote`): SSH reachability to
+  `ssh_target` (key-based; no prompt). Set it in `config.yaml`
+  (`ssh_target: user@host`) or the `AGENTSSH_TARGET` env var.
+- **tmux-only mode** (`orchestrator: local`): the orchestrator runs on the
+  *same host* as the agent TUI, in its own tmux window. No ssh needed — use
+  `remote-agent-relay/scripts/tmux_local.sh` instead of the ssh-wrapped
+  capture below.
+- A tmux session on the host (default `main`) with a window running the
   agent's TUI.
 - The helper `scripts/capture.sh` (bundled) — auto-detects the agent window.
 

@@ -31,6 +31,7 @@ ENV_OVERRIDES = {
     "ssh_target": "AGENTSSH_TARGET",
     "repo_path": "AGENT_REPO_PATH",
     "secondary_host": "AGENTSSH_SECONDARY",
+    "orchestrator": "AGENT_ORCHESTRATOR",
     "github_owner": "AGENT_GITHUB_OWNER",
     "github_repo": "AGENT_GITHUB_REPO",
     "git_credentials_file": "AGENT_GIT_CREDENTIALS",

@@ -29,6 +29,14 @@ repo_path: "~/projects/<repo>"            # e.g. ~/projects/my-app
 # Only used by the relay skill's host-level notes. Blank if you don't have one.
 secondary_host: ""                        # e.g. dev@your-gpu-host (optional)
 
+# --- Orchestrator mode --------------------------------------------------------
+# How the relay/monitor skill reaches the agent panes:
+#   remote (default)  -> ssh + tmux  (orchestrator on a DIFFERENT host)
+#   local             -> tmux-only   (orchestrator on the SAME host as the
+#                                     agents; no ssh, no base64, no quoting
+#                                     traps — see references/tmux-local-mode.md)
+orchestrator: "remote"                    # remote | local
+
 # --- GitHub ------------------------------------------------------------------
 # Owner and repo the PR/merge workflow targets.
 github_owner: "<owner>"                   # e.g. your-github-login

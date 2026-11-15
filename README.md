@@ -1,8 +1,10 @@
-# remote-agent-skills
+# agent-orchestration
 
-Generic, shareable agent skills for driving a **long-running remote CLI agent**
-over **SSH + tmux** — with a **build → review → fix → re-review** loop in which
-a *separate* reviewer independently gates the builder's output.
+Generic, shareable agent skills for **orchestrating long-running agent tasks**
+via **tmux** — with a **build → review → fix → re-review** loop in which a
+*separate* reviewer independently gates the builder's output. Works over **SSH**
+(orchestrator on a different host) **or locally** (orchestrator in its own tmux
+window on the same host, `orchestrator: local`).
 
 Built around the [GitHub Blog's "Build once, run on any agent" guide to agent
 skills](https://github.blog/ai-and-ml/github-copilot/build-once-run-on-any-agent-a-practical-guide-to-agent-skills/). The key practice this repo follows: **keep project config out of the skill** — every host IP, username, project path, and owner name lives in ONE config file, not in the skill bodies. The skills are product-agnostic: they work for any agent that runs as a full-screen TUI inside tmux.
