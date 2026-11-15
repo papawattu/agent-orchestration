@@ -1,4 +1,4 @@
-# agent-orchestration
+# Local and remote agent-orchestration using tmux
 
 Generic, shareable agent skills for **orchestrating long-running agent tasks**
 via **tmux** — with a **build → review → fix → re-review** loop in which a
