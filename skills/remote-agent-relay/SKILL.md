@@ -162,20 +162,52 @@ the CI state (fetch the PR from the GitHub API — see `github-pr-workflow`).
 ## Handing a Brief to the Build Agent (write)
 
 **Local mode (default)** — plain `send-keys -l`, any bytes safe (no base64, no
-quoting trap):
+quoting trap). **Sends submit by default**: `tmux_local.sh send`/`multi`
+append a real Enter after a short settle (250 ms), so the brief actually
+reaches the agent — `send-keys -l` alone only *inserts* the text and never
+submits.
+
 ```bash
-# Send a brief:
+# Send a brief (inserts the text, then submits with Enter):
 tmux_local.sh send build "Open the PR now. Report the number + CI. Do NOT merge."
-# Accept a default / continue (bare Enter):
+# Fan the same brief to every builder (each submitted):
+tmux_local.sh multi b1 b2 b3 -- "Take slice <id>. Build it, open a PR, report the number. Do NOT merge."
+# Insert the text WITHOUT submitting (e.g. to edit an in-progress line, or to
+# stage two half-lines): then submit deliberately with `enter`.
+tmux_local.sh send build --noenter "partial text here"
 tmux_local.sh enter build
-# Pick a numbered option from a menu (e.g. option 2):
+# Pick a numbered option from a menu (option string + Enter):
 tmux_local.sh select build 2
 ```
 
+**Enter-reliability rules** (why `--noenter` and the settle exist):
+- **Default is "submit".** A brief that doesn't get an Enter never reaches the
+  agent — the pane just shows un-entered text. If you send a brief and the
+  agent doesn't react, the first thing to check is whether the Enter landed.
+- **Settle before Enter.** `send-keys -l` dumps the whole line into the pane's
+  input buffer in one shot; a very long brief can have the trailing Enter
+  arrive before the TUI has parsed the preceding characters, so it interleaves
+  mid-line. The 250 ms settle (override `TMUX_LOCAL_DELAY=0`) drains the buffer
+  first. If a particular TUI is slow to render, raise `TMUX_LOCAL_DELAY` (e.g.
+  `=500`).
+- **`--noenter`** is for the two cases where you want the text without a
+  submit: editing a line the agent is mid-typing, or deliberately staging
+  input across two `send` + one `enter`.
+- **Verify a critical brief landed.** After a consequential send (a merge
+  instruction, a "stop"), capture the pane and confirm the agent reacted
+  (a new line appeared / it started working), rather than assuming the Enter
+  got through. `tmux_local.sh status build`.
+
 **Remote mode** — the **quoting-safe** base64 path (because of the nested-ssh
-quoting trap). See `scripts/ssh_safe_send.py`:
+quoting trap). See `scripts/ssh_safe_send.py`. **It also submits by default**
+(same fix as local mode): the brief is sent with `send-keys -l`, then a settle,
+then a real Enter. Pass `--noenter` to insert without submitting.
 ```bash
-python3 scripts/ssh_safe_send.py <build_pane_id> 'Open the PR now. Report the PR number + CI, then stop. Do NOT merge.'
+# Hand a brief to the builder pane (safe, Unicode ok, SUBMITTED):
+python3 scripts/ssh_safe_send.py <pane_id> 'Open the PR now. Report the PR number + CI, then stop. Do NOT merge.'
+# Insert text without submitting (edit a mid-typed line / stage input):
+python3 scripts/ssh_safe_send.py <pane_id> 'partial text' --noenter
+# Slow-rendering TUI? Raise the settle: RELAY_SEND_DELAY=500 python3 ...
 ```
 **Plain-ASCII in inline remote messages.** If you must type the brief inline
 (not via the script), use hyphens (`-`) not em-dashes (`—`), `->` not `→`,

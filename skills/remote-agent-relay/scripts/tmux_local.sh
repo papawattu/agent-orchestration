@@ -8,9 +8,9 @@
 # Targets by WINDOW NAME (not index) so pane renumbering is a non-issue:
 #   tmux_local.sh status  <window>          # live screen of <window>
 #   tmux_local.sh back    <window> [lines]  # scrollback (default 200)
-#   tmux_local.sh send    <window> <msg...> # send a brief (literal mode)
+#   tmux_local.sh send    <window> <msg...>   # brief + submit (Enter); [ --noenter ]
 #   tmux_local.sh enter   <window>          # send a bare Enter
-#   tmux_local.sh select  <window>          # pick a numbered option (Enter)
+#   tmux_local.sh select  <window> <opt>    # pick a numbered option (Enter)
 #   tmux_local.sh pipeon  <window> <file>   # tee the pane's output to <file>
 #   tmux_local.sh pipeoff <window>          # stop the tee
 #   tmux_local.sh interrupt <window>        # send C-c to a pane
@@ -27,6 +27,13 @@
 set -euo pipefail
 
 SESSION="${TMUX_LOCAL_SESSION:-main}"   # override the session name if needed
+# Settle delay (ms) before the trailing Enter. `send-keys -l` injects the
+# whole line into the pane's input buffer in one shot; the TUI's event loop
+# still has to drain it. For long briefs the newline can arrive before the TUI
+# has parsed the preceding characters, so the line lands un-submitted (or the
+# Enter interleaves mid-line). A short settle fixes that. Override with
+# TMUX_LOCAL_DELAY=0 to disable.
+SEND_DELAY="${TMUX_LOCAL_DELAY:-250}"
 
 resolve_target() {
   # Accept a bare window name and turn it into <session>:<window>.
@@ -38,6 +45,28 @@ resolve_target() {
     *:*:*) echo "$w" ;;
     *) echo "${SESSION}:${w}" ;;            # bare name -> main:name
   esac
+}
+
+# send_into <window> [--noenter] <text...>
+# Inject <text> literally (any bytes), then — UNLESS --noenter — settle and
+# send a real Enter so the TUI submits the line. This is the fix for the
+# "send-keys does not always send Enter" bug: `send-keys -l` alone only inserts
+# the text; it never submits.
+send_into() {
+  local w="$1"; shift
+  local noenter=0
+  [[ "${1:-}" == "--noenter" ]] && { noenter=1; shift; }
+  # tmux send-keys -l rejects a leading "--" flag; a brief never starts with it,
+  # so just strip a stray one if present.
+  [[ "${1:-}" == "--" ]] && shift
+  local text="$*"
+  local t
+  t="$(resolve_target "$w")"
+  tmux send-keys -t "$t" -l "$text"
+  if [[ "$noenter" -eq 0 ]]; then
+    [[ "$SEND_DELAY" -gt 0 ]] && sleep "$(awk "BEGIN{printf \"%.3f\", $SEND_DELAY/1000}")"
+    tmux send-keys -t "$t" Enter
+  fi
 }
 
 cmd="${1:-help}"; shift || true
@@ -54,16 +83,17 @@ case "$cmd" in
     ;;
   send)
     w="${1:?window}"; shift
-    tmux send-keys -t "$(resolve_target "$w")" -l "$*"
+    # Appends a settling Enter by default (the brief must actually submit).
+    # Pass --noenter to insert the text without submitting.
+    send_into "$w" "$@"
     ;;
   enter)
     tmux send-keys -t "$(resolve_target "${1:?window}")" Enter
     ;;
   select)
-    # Pick a numbered option: send the option string then Enter.
+    # Pick a numbered option: send the option string then a real Enter.
     w="${1:?window}"; opt="${2:?option}"
-    tmux send-keys -t "$(resolve_target "$w")" -l "$opt"
-    tmux send-keys -t "$(resolve_target "$w")" Enter
+    send_into "$w" "$opt"
     ;;
   pipeon)
     w="${1:?window}"; f="${2:?file}"
@@ -79,10 +109,10 @@ case "$cmd" in
     tmux kill-window -t "$(resolve_target "${1:?window}")"
     ;;
   multi)
-    # Send the SAME brief to several windows (multi-builder fan-out).
-    # `multi b1 b2 b3 -- "Open PRs, report numbers. Do NOT merge."`
-    # Windows come first, then a literal `--`, then the brief (any bytes).
-    # `send-keys -l` is literal, so Unicode is safe (local, no quoting trap).
+    # Send the SAME brief to several windows (multi-builder fan-out), each
+    # submitted with a settling Enter. `multi b1 b2 b3 -- "Open PRs..."`.
+    # Windows first, then a literal `--`, then the brief (any bytes).
+    # Per-pane settle (TMUX_LOCAL_DELAY) avoids the Enter-interleave race.
     windows=()
     while [[ $# -gt 0 && "$1" != "--" ]]; do windows+=("$1"); shift; done
     [[ $# -gt 0 && "$1" == "--" ]] && shift
@@ -93,7 +123,7 @@ case "$cmd" in
     fi
     for w in "${windows[@]}"; do
       printf '[->] %s: %s\n' "$w" "${brief[*]}"
-      tmux send-keys -t "$(resolve_target "$w")" -l "${brief[*]}"
+      send_into "$w" "${brief[*]}"
     done
     ;;
   reorder)

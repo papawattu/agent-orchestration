@@ -6,29 +6,34 @@ Why: a message containing em-dashes / arrows / middle-dots inside a nested
 the message never lands. This script base64-encodes the brief and ships it to
 the remote host, so Unicode in the brief is safe.
 
+Sends SUBMIT BY DEFAULT: the brief is sent with `send-keys -l`, then a short
+settle, then a real Enter — because `send-keys -l` alone only *inserts* the
+text and never submits, so a brief without an Enter never reaches the agent.
+Pass --noenter to insert the text without submitting (e.g. to edit a line the
+agent is mid-typing). Settle is 250 ms; override with RELAY_SEND_DELAY (ms)
+or RELAY_SEND_DELAY=0 to disable (use a higher value for slow-rendering TUIs).
+
 The remote target is read from the shared config (see load_config.py):
     ssh_target  -> env AGENT_SSH_TARGET  >  config.yaml  >  config.example.yaml
 Keep plain-ASCII hyphens (-) in any inline message you type by hand; reserve
 Unicode for this scripted path.
 
 Usage:
-  python3 ssh_safe_send.py <pane_id> <message> [--enter] [--select]
+  python3 ssh_safe_send.py <pane_id> <message> [--noenter]
 
   <pane_id>   tmux pane id (e.g. %15). Resolve it live with:
                 ssh <ssh_target> 'tmux list-panes -s -F "#{pane_id} #{window_name} #{pane_current_command}"'
   <message>   the brief/instruction (may contain Unicode; it's base64'd).
-  --enter     append a bare Enter (accept default / continue) — for a resume.
-  --select    append a bare Enter after a numbered/checkbox menu selection.
+  --noenter   insert the text WITHOUT a trailing Enter (submit it yourself later
+              with `ssh <t> 'tmux send-keys -t <pane> Enter'`, or a second call
+              with an empty message + no --noenter).
 
 Examples:
-  # Hand a brief to the builder pane (safe, Unicode ok):
+  # Hand a brief to the builder pane (safe, Unicode ok, SUBMITTED):
   python3 ssh_safe_send.py %15 'Open the PR now. Report the PR number + CI, then stop. Do NOT merge.'
 
-  # Resume a paused agent at a gate:
-  python3 ssh_safe_send.py %15 '' --enter
-
-  # Pick a numbered option from a confirmation menu (e.g. option 2):
-  python3 ssh_safe_send.py %15 '2' --select
+  # Insert text without submitting (edit a mid-typed line / stage input):
+  python3 ssh_safe_send.py %15 'partial text' --noenter
 """
 import os
 import subprocess
@@ -41,14 +46,16 @@ import load_config  # noqa: E402
 
 def main():
     args = sys.argv[1:]
-    enter = "--enter" in args
-    select = "--select" in args
-    args = [a for a in args if a not in ("--enter", "--select")]
+    noenter = "--noenter" in args
+    args = [a for a in args if a != "--noenter"]
     if len(args) < 2:
         sys.stderr.write(__doc__)
         sys.exit(2)
     pane, msg = args[0], args[1]
     target = load_config.target()
+    # Settle (ms) before the trailing Enter, so a long brief's newline doesn't
+    # interleave mid-line before the TUI has parsed the preceding characters.
+    settle = int(os.environ.get("RELAY_SEND_DELAY", "250"))
 
     # Write the brief to a local temp file (Unicode-safe; the base64 hop is
     # what protects it from the nested-ssh quoting trap).
@@ -63,15 +70,15 @@ def main():
         os.unlink(brief_path)
 
     # Remote script: decode the brief, send it with send-keys -l (literal —
-    # no key interpretation), then optionally a bare Enter.
+    # no key interpretation), then — UNLESS --noenter — settle + a real Enter.
     remote = (
         "#!/usr/bin/env bash\nset -euo pipefail\n"
         f"BRIEF=$(echo '{b64}' | base64 -d)\n"
         f"tmux send-keys -t {pane} -l \"$BRIEF\"\n"
     )
-    if enter:
-        remote += f"tmux send-keys -t {pane} Enter\n"
-    if select:
+    if not noenter:
+        if settle > 0:
+            remote += f"sleep 0.{max(settle // 10, 1)}\n" if settle < 1000 else f"sleep {settle / 1000:.3f}\n"
         remote += f"tmux send-keys -t {pane} Enter\n"
 
     # Ship the script base64'd and run it on the remote host (same quoting-safe
