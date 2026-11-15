@@ -28,6 +28,16 @@ interactive CLI (a full-screen TUI) inside tmux. The two roles are:
 
 The **owner** (user) gates every merge / destructive step.
 
+**Two modes / which skill to read:**
+- **`local`** (tmux-only, DEFAULT — orchestrator on the *same host* as the
+  agents) → read **`remote-agent-relay`**, which leads with the local
+  `tmux_local.sh` path. This skill's loop model (two roles, owner gate,
+  self-merge detection) is identical — only the transport is ssh here.
+- **`remote`** (ssh+tmux — orchestrator on a *different* host) → this skill is
+  the reference. Every action below is an ssh round-trip; use
+  `remote-agent-relay/scripts/ssh_safe_send.py` for briefs (base64 path,
+  because of the nested-ssh quoting trap).
+
 ## When to Use
 
 - Owner says "build X on the remote box" / "keep it building" / "run it

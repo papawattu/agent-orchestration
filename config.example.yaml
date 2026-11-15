@@ -31,11 +31,13 @@ secondary_host: ""                        # e.g. dev@your-gpu-host (optional)
 
 # --- Orchestrator mode --------------------------------------------------------
 # How the relay/monitor skill reaches the agent panes:
-#   remote (default)  -> ssh + tmux  (orchestrator on a DIFFERENT host)
-#   local             -> tmux-only   (orchestrator on the SAME host as the
-#                                     agents; no ssh, no base64, no quoting
-#                                     traps — see references/tmux-local-mode.md)
-orchestrator: "remote"                    # remote | local
+#   local  (DEFAULT)  -> tmux-only. Orchestrator on the SAME host as the agents,
+#                        in its own tmux window. No ssh, no base64, no quoting
+#                        traps. The common case — lead with this.
+#   remote            -> ssh + tmux. Orchestrator on a DIFFERENT host; every
+#                        action is an ssh round-trip. Needed only when the
+#                        orchestrator can't run on the same box as the agents.
+orchestrator: "local"                     # local (default) | remote
 
 # --- GitHub ------------------------------------------------------------------
 # Owner and repo the PR/merge workflow targets.

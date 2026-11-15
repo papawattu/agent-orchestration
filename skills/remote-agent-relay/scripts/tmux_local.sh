@@ -13,6 +13,7 @@
 #   tmux_local.sh select  <window>          # pick a numbered option (Enter)
 #   tmux_local.sh pipeon  <window> <file>   # tee the pane's output to <file>
 #   tmux_local.sh pipeoff <window>          # stop the tee
+#   tmux_local.sh interrupt <window>        # send C-c to a pane
 #   tmux_local.sh panes                         # list all panes (id/name/cmd)
 #   tmux_local.sh kill    <window>          # close the window
 #
@@ -65,6 +66,9 @@ case "$cmd" in
     ;;
   pipeoff)
     tmux pipe-pane -t "$(resolve_target "${1:?window}")"
+    ;;
+  interrupt)   # send C-c to a pane
+    tmux send-keys -t "$(resolve_target "${1:?window}")" C-c
     ;;
   kill)
     tmux kill-window -t "$(resolve_target "${1:?window}")"

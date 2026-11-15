@@ -34,21 +34,32 @@ unless the user explicitly asks you to answer a prompt.
 
 ## Prerequisites
 
-- **ssh+tmux mode** (default, `orchestrator: remote`): SSH reachability to
-  `ssh_target` (key-based; no prompt). Set it in `config.yaml`
-  (`ssh_target: user@host`) or the `AGENTSSH_TARGET` env var.
-- **tmux-only mode** (`orchestrator: local`): the orchestrator runs on the
-  *same host* as the agent TUI, in its own tmux window. No ssh needed — use
-  `remote-agent-relay/scripts/tmux_local.sh` instead of the ssh-wrapped
-  capture below.
+- **tmux-only mode** (`orchestrator: local`, DEFAULT): the orchestrator runs on
+  the *same host* as the agent TUI, in its own tmux window. No ssh needed — use
+  `remote-agent-relay/scripts/tmux_local.sh` instead of the ssh-wrapped capture
+  below. **The common case.**
+- **ssh+tmux mode** (`orchestrator: remote`): SSH reachability to `ssh_target`
+  (key-based; no prompt). Set it in `config.yaml` (`ssh_target: user@host`) or
+  the `AGENTSSH_TARGET` env var.
 - A tmux session on the host (default `main`) with a window running the
   agent's TUI.
-- The helper `scripts/capture.sh` (bundled) — auto-detects the agent window.
+- The helper `scripts/capture.sh` (bundled, remote mode) — auto-detects the
+  agent window.
 
 ## How to Run
 
-Capture the pane by piping the bundled helper over SSH (it runs on the remote
-host and auto-detects the agent window):
+**Local mode (default)** — drive the pane with `remote-agent-relay/scripts/tmux_local.sh`
+(same host, no ssh):
+
+```bash
+# Live screen:
+tmux_local.sh status <window>
+# Scrollback (last 200 lines):
+tmux_local.sh back <window> 200
+```
+
+**Remote mode** — pipe the bundled helper over SSH (it runs on the remote host
+and auto-detects the agent window):
 
 ```bash
 ssh <ssh_target> 'bash -s' < scripts/capture.sh
@@ -61,7 +72,7 @@ a final-output dump):
 ssh <ssh_target> 'bash -s -- main:2 250' < scripts/capture.sh
 ```
 
-Fallback if the helper can't run — capture directly:
+**Remote fallback** if the helper can't run — capture directly:
 
 ```bash
 ssh <ssh_target> 'tmux list-windows -a -F "#{session_name}:#{window_index} #{window_name} [#{pane_current_command}]"'
@@ -69,9 +80,10 @@ ssh <ssh_target> 'tmux capture-pane -p -t main:1'          # live screen
 ssh <ssh_target> 'tmux capture-pane -p -t main:1 -S -200'  # scrollback
 ```
 
-The helper prints four blocks — `===TARGET===`, `===META===`, `===SCREEN===`,
-`===SCROLLBACK===`. Read **SCREEN** for live state; **SCROLLBACK** for context
-and the final output.
+In remote mode the helper prints four blocks — `===TARGET===`, `===META===`,
+`===SCREEN===`, `===SCROLLBACK===`. Read **SCREEN** for live state;
+**SCROLLBACK** for context and the final output. In local mode the two
+commands above give you SCREEN and SCROLLBACK directly.
 
 ## Classify the State
 
@@ -100,6 +112,14 @@ idle / waiting / stuck.
 When — and only when — the user tells you what to send, send keys to the
 agent input and re-capture to confirm it took:
 
+**Local mode (default):**
+```bash
+tmux_local.sh send <window> "y" && tmux_local.sh enter <window>   # type then Enter
+tmux_local.sh enter <window>                                      # bare Enter
+tmux_local.sh interrupt <window>                                  # C-c
+```
+
+**Remote mode:**
 ```bash
 ssh <ssh_target> "tmux send-keys -t main:1 'y' Enter"   # type then Enter
 ssh <ssh_target> "tmux send-keys -t main:1 Enter"       # bare Enter
