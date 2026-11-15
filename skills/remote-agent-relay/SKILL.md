@@ -217,6 +217,76 @@ commands above change with the mode:
   is still on the right branch / project. A pane that has gone idle on a
   different branch has drifted — don't relay into it.
 
+## Multi-Builder (N builders, one reviewer)
+
+Scale the loop to **N parallel builders** sharing **one** reviewer. Each
+builder gets its own window; all fan out the same brief at once; the single
+reviewer reviews each PR independently.
+
+### 1. Rename + renumber at the START of the loop
+
+Names must be predictable before you start. Run this **once, at the top of the
+loop**, to name the builder windows `b1..bN` (in fan-out order) and keep
+`review` distinct:
+
+```bash
+# e.g. three builders + one reviewer, already sitting at indices 0,1,2,3:
+tmux_local.sh reorder b1=0 b2=1 b3=2 review=3
+```
+
+`reorder` renames in place by current index (collision-safe via a temp-name
+pass) and prints the resulting order. The first arg gets the lowest index, so
+`b1` is always the first builder, `review` is always last. If you add builders
+mid-loop, spawn them, then re-run `reorder` with the full set (append the new
+`bN=<idx>` before `review=<idx>`).
+
+### 2. Fan a brief out to all builders at once
+
+One brief → every builder pane (and you can include `review` to nudge the
+reviewer too):
+
+```bash
+# Hand the next slice to every builder simultaneously:
+tmux_local.sh multi b1 b2 b3 -- "Take slice <id> from the todo. Build it, open a PR, report the number. Do NOT merge."
+
+# Nudge all builders to stop-and-report after the owner says so:
+tmux_local.sh multi b1 b2 b3 -- "Stop. Report your PR number + CI state. Do NOT merge."
+```
+
+`multi` uses `send-keys -l` per pane, so Unicode is safe (no base64, no quoting
+trap). Each pane is addressed by **window name**, immune to pane-index churn.
+
+### 3. Read each builder's state individually
+
+`multi` is send-only; for status, capture each pane by name:
+
+```bash
+for w in b1 b2 b3; do
+  echo "=== $w ==="
+  tmux_local.sh back "$w" 40
+done
+```
+
+### 4. The loop rules still hold (one reviewer, N builders)
+
+- **N builders, 1 reviewer.** Each builder opens **its own PR** and stops.
+  The single reviewer reviews each PR independently — one reviewer is still the
+  gate for the whole batch.
+- **The owner gates every merge.** "merge #N" applies per PR; the owner reviews
+  each verdict before it lands.
+- **Self-merge detection is per-PR.** After each merge, verify the repo tip
+  advanced to that PR's expected SHA.
+- **Builder drift is per-pane.** A builder that drifted to a different branch
+  must be excluded from the next `multi` fan-out (or reset) — don't send a
+  brief into a drifted pane.
+- **Fresh-builder budget is per-pane.** When one builder hits ~80% ctx, flag it
+  and restart **that** pane; the other builders keep going. (Owner decision.)
+
+**Remote mode equivalent:** `multi` and `reorder` are local-only (they drive a
+local tmux server). In remote mode, fan out with a loop of
+`ssh_safe_send.py <pane> <brief>` and rename with `ssh <target> 'tmux
+rename-window -t <idx> <name>'` — the same model, the ssh transport.
+
 ## Repo Tip Is the Source of Fact
 
 The **repo's `main` tip** (fetched, not read from a pane's scrollback) is the

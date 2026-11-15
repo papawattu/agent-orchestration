@@ -16,9 +16,14 @@
 #   tmux_local.sh interrupt <window>        # send C-c to a pane
 #   tmux_local.sh panes                         # list all panes (id/name/cmd)
 #   tmux_local.sh kill    <window>          # close the window
+#   tmux_local.sh multi   <win>... -- <brief...> # fan one brief out to N windows
+#   tmux_local.sh reorder <name>=<idx>...  # rename + renumber windows (start of loop)
 #
-# <window> is a tmux target: "build", "review", "main:build", "main:build.0",
-# or a pane id "%15". Window names are stable; pane ids churn — prefer names.
+# <window> is a tmux target: "build", "review", "b1", "b2", "main:build",
+# "main:build.0", or a pane id "%15". Window names are stable; pane ids churn —
+# prefer names. For multi-builder, name panes b1..bN and drive them all with
+# `multi` (or loop over them). `reorder` renames + renumbers at the START of
+# the loop so the names are predictable: b1, b2, ..., then review.
 set -euo pipefail
 
 SESSION="${TMUX_LOCAL_SESSION:-main}"   # override the session name if needed
@@ -73,7 +78,58 @@ case "$cmd" in
   kill)
     tmux kill-window -t "$(resolve_target "${1:?window}")"
     ;;
+  multi)
+    # Send the SAME brief to several windows (multi-builder fan-out).
+    # `multi b1 b2 b3 -- "Open PRs, report numbers. Do NOT merge."`
+    # Windows come first, then a literal `--`, then the brief (any bytes).
+    # `send-keys -l` is literal, so Unicode is safe (local, no quoting trap).
+    windows=()
+    while [[ $# -gt 0 && "$1" != "--" ]]; do windows+=("$1"); shift; done
+    [[ $# -gt 0 && "$1" == "--" ]] && shift
+    brief=("$@")
+    if [[ ${#windows[@]} -lt 1 || ${#brief[@]} -lt 1 ]]; then
+      echo "usage: tmux_local.sh multi <win>... -- <brief...>" >&2
+      exit 2
+    fi
+    for w in "${windows[@]}"; do
+      printf '[->] %s: %s\n' "$w" "${brief[*]}"
+      tmux send-keys -t "$(resolve_target "$w")" -l "${brief[*]}"
+    done
+    ;;
+  reorder)
+    # Rename + (re)number windows AT THE START of the loop so names are
+    # predictable: `reorder b1=0 b2=1 review=2`.
+    #   b1,b2,...  = the builder windows, in fan-out order (renumbered 0,1,...)
+    #   review     = the reviewer window (renamed last so it stays distinct)
+    # Renames by CURRENT index (stable, no collisions). Pass the windows in
+    # the ORDER you want them — the first arg gets index 0, the second 1, etc.
+    # We rename in place; if you also need to physically re-order the tab bar,
+    # the indices here already define the desired order (rename 0->b1, 1->b2…).
+    pairs=("$@")
+    [[ ${#pairs[@]} -lt 1 ]] && { echo "usage: tmux_local.sh reorder <name>=<idx>..." >&2; exit 2; }
+    # Validate all pairs first (fail before touching anything).
+    for p in "${pairs[@]}"; do
+      [[ "$p" == *=* ]] || { echo "reorder: bad pair '$p' (want name=idx)" >&2; exit 2; }
+    done
+    # Rename by current index. Two passes: first to a unique temp name, then to
+    # the real name — so swapping names (e.g. two windows both wanting 'b1')
+    # never collides mid-pass.
+    i=0
+    for p in "${pairs[@]}"; do
+      IFS='=' read -r name idx <<<"$p"
+      tmux rename-window -t "${SESSION}:${idx}" "__reorder_${i}__"
+      i=$((i+1))
+    done
+    i=0
+    for p in "${pairs[@]}"; do
+      IFS='=' read -r name idx <<<"$p"
+      tmux rename-window -t "${SESSION}:${idx}" "$name"
+      i=$((i+1))
+    done
+    # Report the resulting order.
+    tmux list-windows -t "$SESSION" -F "  #{window_index}  #{window_name}  [#{pane_current_command}]"
+    ;;
   help|*)
-    sed -n '2,20p' "$0"
+    sed -n '2,24p' "$0"
     ;;
 esac
