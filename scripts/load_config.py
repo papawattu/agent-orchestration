@@ -5,7 +5,7 @@ Every skill in this repo is generic: it contains no host IPs, usernames,
 project paths, or owner names. All of those live in ONE config file.
 
 Precedence (highest wins):
-    1. Environment variable   (AGENTSSH_TARGET, AGENT_REPO_PATH, AGENT_GITHUB_OWNER, ...)
+    1. Environment variable   (AGENT_SSH_TARGET, AGENT_REPO_PATH, AGENT_GITHUB_OWNER, ...)
     2. config.yaml            (your local filled-in copy, next to this file's
                                parent repo root; git-ignored)
     3. config.example.yaml    (placeholders only — the shipped default)
@@ -13,7 +13,7 @@ Precedence (highest wins):
 Usage:
     import load_config
     cfg = load_config.load()
-    target = cfg["ssh_target"]            # e.g. "user@devbox.internal"
+    target = cfg["ssh_target"]            # e.g. "user@your-host"
     repo   = cfg["repo_path"]             # e.g. "~/projects/<repo>"
     owner  = cfg["github_owner"]
     repo_n = cfg["github_repo"]
@@ -28,9 +28,9 @@ from pathlib import Path
 
 # Map: config key -> env var that overrides it.
 ENV_OVERRIDES = {
-    "ssh_target": "AGENTSSH_TARGET",
+    "ssh_target": "AGENT_SSH_TARGET",
     "repo_path": "AGENT_REPO_PATH",
-    "secondary_host": "AGENTSSH_SECONDARY",
+    "secondary_host": "AGENT_SSH_SECONDARY",
     "orchestrator": "AGENT_ORCHESTRATOR",
     "github_owner": "AGENT_GITHUB_OWNER",
     "github_repo": "AGENT_GITHUB_REPO",

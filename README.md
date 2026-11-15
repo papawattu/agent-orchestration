@@ -21,15 +21,17 @@ also need key-based ssh to `ssh_target`.
 directory. Point it at this repo — either symlink, copy, or clone:
 
 ```bash
-# Hermes (default skill dir):
-ln -s "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" ~/.hermes/skills/agent-orchestration
+# Hermes (default skill dir) — run this FROM INSIDE the clone so the symlink
+# points at this repo, or link the fixed clone path (~/agent-orchestration):
+ln -s ~/agent-orchestration ~/.hermes/skills/agent-orchestration
+#   (or, from inside the clone:  ln -s "$(pwd)" ~/.hermes/skills/agent-orchestration)
 
 # Or just copy the skill folders you want:
 mkdir -p ~/.hermes/skills
 cp -r skills/remote-agent-relay skills/agent-task-monitor ~/.hermes/skills/
 
-# Or clone and add the skills dir to the agent's skill-path config:
-git clone https://github.com/papawattu/agent-orchestration ~/.agent-orchestration
+# Or clone (the path above is assumed):
+git clone https://github.com/papawattu/agent-orchestration ~/agent-orchestration
 ```
 
 The skill names and frontmatter are standard, so an agent that scans `SKILL.md`
@@ -93,21 +95,23 @@ All host-specific values live in **ONE** file — copy `config.example.yaml` to
 `config.yaml` and fill it in:
 
 ```yaml
-ssh_target: user@devbox.internal   # the remote host (SSH, key-based)
-repo_path: ~/projects/myrepo       # the repo on the remote host
+orchestrator: local                # local (default, same-host tmux) | remote
+ssh_target: user@your-host   # the remote host (SSH, key-based) — remote mode
+repo_path: ~/projects/myrepo       # the repo on the host running the agents
 github_owner: yourghusername
 github_repo: your-repo
 git_credentials_file: ~/.git-credentials
 ```
 
-Precedence (highest wins): env var (`AGENTSSH_TARGET`, `AGENT_REPO_PATH`, …) →
+Precedence (highest wins): env var (`AGENT_SSH_TARGET`, `AGENT_REPO_PATH`, …) →
 `config.yaml` → `config.example.yaml`. The `config.yaml` with your real values
 is **git-ignored** — never commit it.
 
 | Env var | Config key | Meaning |
 |---------|-----------|---------|
-| `AGENTSSH_TARGET` | `ssh_target` | `user@host` for the remote host |
-| `AGENT_REPO_PATH` | `repo_path` | repo path on the remote host |
+| `AGENT_ORCHESTRATOR` | `orchestrator` | `local` (default) or `remote` — where the orchestrator runs |
+| `AGENT_SSH_TARGET` | `ssh_target` | `user@host` for the remote host (remote mode) |
+| `AGENT_REPO_PATH` | `repo_path` | repo path on the host running the agents |
 | `AGENT_GITHUB_OWNER` | `github_owner` | GitHub owner/org |
 | `AGENT_GITHUB_REPO` | `github_repo` | GitHub repo name |
 | `AGENT_GIT_CREDENTIALS` | `git_credentials_file` | PAT store (git credential-store format) |
@@ -123,8 +127,10 @@ scripts/load_config.py       # shared config loader (env > config.yaml > example
 skills/
   remote-agent-relay/
     SKILL.md
-    scripts/ssh_safe_send.py       # quoting-safe tmux send (base64 path)
+    scripts/ssh_safe_send.py       # quoting-safe tmux send (base64 path, remote)
     scripts/worktree_classifier.py # classify worktrees: safe-to-prune vs KEEP
+    scripts/tmux_local.sh          # local-mode helper (same-host, no ssh)
+    references/tmux-local-mode.md  # local-mode mechanics + pipe-pane tee
   agent-task-monitor/
     SKILL.md
     scripts/capture.sh             # read-only TUI capture (screen + scrollback)
@@ -144,7 +150,7 @@ cp config.example.yaml config.yaml
 $EDITOR config.yaml    # fill in your ssh_target, repo_path, github_owner/repo
 
 # Safe send a brief to the builder pane (Unicode-safe) — remote mode:
-AGENTSSH_TARGET=user@host python3 skills/remote-agent-relay/scripts/ssh_safe_send.py %15 'Open the PR now. Report the number + CI. Do NOT merge.'
+AGENT_SSH_TARGET=user@host python3 skills/remote-agent-relay/scripts/ssh_safe_send.py %15 'Open the PR now. Report the number + CI. Do NOT merge.'
 # ...or local mode (no ssh, no env needed):
 bash skills/remote-agent-relay/scripts/tmux_local.sh send build 'Open the PR now. Report the number + CI. Do NOT merge.'
 

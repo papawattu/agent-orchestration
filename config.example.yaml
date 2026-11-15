@@ -11,15 +11,15 @@
 #   3. config.yaml is local-only — it is git-ignored. Never commit it.
 #
 # Precedence (highest wins):
-#   1. Environment variable  (e.g. AGENTSSH_TARGET)
+#   1. Environment variable  (e.g. AGENT_SSH_TARGET)
 #   2. config.yaml           (your filled-in local copy)
 #   3. config.example.yaml   (this file — placeholders only)
 #
 # The scripts/ helpers auto-load this file (see scripts/load_config.py).
 
-# --- Remote host the build agent runs on (the "devbox") ----------------------
+# --- Remote host the build agent runs on (remote mode) -----------------------
 # Full ssh target: <user>@<host>. Key-based (no password prompt).
-ssh_target: "user@devbox.internal"        # e.g. dev@your-devbox-hostname
+ssh_target: "user@your-host"               # e.g. dev@your-box (SSH, key-based)
 
 # --- The project the loop builds (any git repo on the remote host) ------------
 # Absolute path of the main working tree on the remote host.

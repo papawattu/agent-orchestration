@@ -36,7 +36,7 @@ finally:
     os.unlink(script_path)
 
 # 3. Ship it to the remote host, decode + run, clean up.
-target = os.environ.get("AGENTSSH_TARGET")  # or load_config.target()
+target = os.environ.get("AGENT_SSH_TARGET")  # or load_config.target()
 ssh_cmd = (
     f"echo '{b64}' | base64 -d > /tmp/remote_script.sh "
     f"&& bash /tmp/remote_script.sh && rm -f /tmp/remote_script.sh"

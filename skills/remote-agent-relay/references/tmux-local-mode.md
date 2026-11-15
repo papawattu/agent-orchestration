@@ -105,4 +105,4 @@ state can be passed without a file:
   trivial to attach and watch (`tmux attach` / `select-window`).
 - **Con:** the orchestrator must run on the same host as the agents. If the
   relay skill is driven from a *different* box (e.g. Hermes on a laptop, agent
-  on a devbox), you need the ssh+tmux mode.
+  on a separate box), you need the ssh+tmux mode.

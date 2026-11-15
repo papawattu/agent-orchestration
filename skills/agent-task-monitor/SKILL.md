@@ -40,7 +40,7 @@ unless the user explicitly asks you to answer a prompt.
   below. **The common case.**
 - **ssh+tmux mode** (`orchestrator: remote`): SSH reachability to `ssh_target`
   (key-based; no prompt). Set it in `config.yaml` (`ssh_target: user@host`) or
-  the `AGENTSSH_TARGET` env var.
+  the `AGENT_SSH_TARGET` env var.
 - A tmux session on the host (default `main`) with a window running the
   agent's TUI.
 - The helper `scripts/capture.sh` (bundled, remote mode) — auto-detects the
