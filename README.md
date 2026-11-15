@@ -9,12 +9,60 @@ window on the same host, `orchestrator: local`).
 Built around the [GitHub Blog's "Build once, run on any agent" guide to agent
 skills](https://github.blog/ai-and-ml/github-copilot/build-once-run-on-any-agent-a-practical-guide-to-agent-skills/). The key practice this repo follows: **keep project config out of the skill** — every host IP, username, project path, and owner name lives in ONE config file, not in the skill bodies. The skills are product-agnostic: they work for any agent that runs as a full-screen TUI inside tmux.
 
+## Install
+
+**Requirements:** `tmux` and `git` on the host where the agents run. Python 3
+(≥3.8) if you use the helper scripts. In **local** mode the orchestrator is a
+tmux window on the *same* host as the agents (no ssh); in **remote** mode you
+also need key-based ssh to `ssh_target`.
+
+**1. Get the skills into your agent's skill dir.** Any agent that reads
+`SKILL.md` files (Hermes, Claude, Codex, …) picks these up from a `skills/`
+directory. Point it at this repo — either symlink, copy, or clone:
+
+```bash
+# Hermes (default skill dir):
+ln -s "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" ~/.hermes/skills/agent-orchestration
+
+# Or just copy the skill folders you want:
+mkdir -p ~/.hermes/skills
+cp -r skills/remote-agent-relay skills/agent-task-monitor ~/.hermes/skills/
+
+# Or clone and add the skills dir to the agent's skill-path config:
+git clone https://github.com/papawattu/agent-orchestration ~/.agent-orchestration
+```
+
+The skill names and frontmatter are standard, so an agent that scans `SKILL.md`
+will list them automatically. The bundled `scripts/` travel with each skill.
+
+**2. Configure.** One file holds all host-specific values:
+
+```bash
+cd <repo>                     # the clone above
+cp config.example.yaml config.yaml
+$EDITOR config.yaml           # fill in ssh_target, repo_path, github_owner/repo, orchestrator
+```
+
+`config.yaml` is git-ignored — never commit it. You can also set values per-run
+via `AGENT_*` env vars (see the table below) instead of editing the file.
+
+**3. Smoke-test.**
+
+```bash
+# Local mode: confirm the helper sees your agent panes.
+bash skills/remote-agent-relay/scripts/tmux_local.sh panes
+
+# Remote mode: confirm the capture helper reaches the remote TUI.
+ssh <ssh_target> 'bash -s' < skills/agent-task-monitor/scripts/capture.sh
+```
+
+If both print sensible output, you're wired up.
+
 ## The model
 
 ```
                  +----------------------------------------------------+
-                 |  remote host (ssh_target)                          |
-                 |   tmux session "main":                             |
+                 |  host running the agents (tmux session "main")     |
                  |     window "build"   -> builder pane (writes code) |
                  |     window "review"  -> reviewer pane (gates PRs)  |
                  |  repo: <repo_path>                                  |
@@ -22,7 +70,8 @@ skills](https://github.blog/ai-and-ml/github-copilot/build-once-run-on-any-agent
                           ^                       ^
         relay status      |                       |  hand a brief
         / send a brief    |                       |  ("build", "open PR",
-   (Hermes agent) <-------+                       +------->  "review", "fix")
+   (orchestrator) <-------+                       +------->  "review", "fix")
+        local: same host (tmux)   |   remote: different host (ssh + tmux)
 ```
 
 - **Builder** — writes code, opens PRs. **Never merges.**
@@ -94,8 +143,10 @@ skills/
 cp config.example.yaml config.yaml
 $EDITOR config.yaml    # fill in your ssh_target, repo_path, github_owner/repo
 
-# Safe send a brief to the builder pane (Unicode-safe):
-COXSSH_TARGET=user@host python3 skills/remote-agent-relay/scripts/ssh_safe_send.py %15 'Open the PR now. Report the number + CI. Do NOT merge.'
+# Safe send a brief to the builder pane (Unicode-safe) — remote mode:
+AGENTSSH_TARGET=user@host python3 skills/remote-agent-relay/scripts/ssh_safe_send.py %15 'Open the PR now. Report the number + CI. Do NOT merge.'
+# ...or local mode (no ssh, no env needed):
+bash skills/remote-agent-relay/scripts/tmux_local.sh send build 'Open the PR now. Report the number + CI. Do NOT merge.'
 
 # Classify worktrees (safe-to-prune vs KEEP):
 ssh user@host 'cd ~/projects/myrepo && python3 skills/remote-agent-relay/scripts/worktree_classifier.py'
