@@ -11,7 +11,7 @@
 #   3. config.yaml is local-only — it is git-ignored. Never commit it.
 #
 # Precedence (highest wins):
-#   1. Environment variable  (e.g. COXSSH_TARGET)
+#   1. Environment variable  (e.g. AGENTSSH_TARGET)
 #   2. config.yaml           (your filled-in local copy)
 #   3. config.example.yaml   (this file — placeholders only)
 #

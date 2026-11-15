@@ -14,7 +14,7 @@ metadata:
 # Remote CLI via SSH + tmux
 
 Drive a **long-running CLI agent** running on a **remote host** (configured as
-`ssh_target` in `config.yaml` / `COXSSH_TARGET`) by talking to its **tmux
+`ssh_target` in `config.yaml` / `AGENTSSH_TARGET`) by talking to its **tmux
 session** over ssh. This is the workhorse for "build X on the remote box and
 keep it going" plus a **build → review → fix → re-review** loop in which a
 *separate* reviewer pane independently gates the builder's output.

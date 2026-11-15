@@ -5,7 +5,7 @@ Every skill in this repo is generic: it contains no host IPs, usernames,
 project paths, or owner names. All of those live in ONE config file.
 
 Precedence (highest wins):
-    1. Environment variable   (COXSSH_TARGET, COX_REPO_PATH, COX_GITHUB_OWNER, ...)
+    1. Environment variable   (AGENTSSH_TARGET, COX_REPO_PATH, COX_GITHUB_OWNER, ...)
     2. config.yaml            (your local filled-in copy, next to this file's
                                parent repo root; git-ignored)
     3. config.example.yaml    (placeholders only — the shipped default)
@@ -28,13 +28,13 @@ from pathlib import Path
 
 # Map: config key -> env var that overrides it.
 ENV_OVERRIDES = {
-    "ssh_target": "COXSSH_TARGET",
-    "repo_path": "COX_REPO_PATH",
-    "secondary_host": "COXSSH_SECONDARY",
-    "github_owner": "COX_GITHUB_OWNER",
-    "github_repo": "COX_GITHUB_REPO",
-    "git_credentials_file": "COX_GIT_CREDENTIALS",
-    "hermes_state_db": "COX_HERMES_STATE_DB",
+    "ssh_target": "AGENTSSH_TARGET",
+    "repo_path": "AGENT_REPO_PATH",
+    "secondary_host": "AGENTSSH_SECONDARY",
+    "github_owner": "AGENT_GITHUB_OWNER",
+    "github_repo": "AGENT_GITHUB_REPO",
+    "git_credentials_file": "AGENT_GIT_CREDENTIALS",
+    "hermes_state_db": "AGENT_STATE_DB",
 }
 
 

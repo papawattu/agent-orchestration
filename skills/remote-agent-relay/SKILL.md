@@ -20,7 +20,7 @@ metadata:
 # Remote Agent Relay
 
 A **long-running agent task** (a full-screen TUI) runs inside tmux on a remote
-host, configured as `ssh_target` in `config.yaml` (or the `COXSSH_TARGET`
+host, configured as `ssh_target` in `config.yaml` (or the `AGENTSSH_TARGET`
 env var). The user pings the Hermes agent to *relay* — get the agent's status
 and, when asked, hand it a short instruction. The task is NOT attached; it is
 read and steered through tmux over ssh.

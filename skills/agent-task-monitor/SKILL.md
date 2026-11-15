@@ -35,7 +35,7 @@ unless the user explicitly asks you to answer a prompt.
 ## Prerequisites
 
 - SSH reachability to `ssh_target` (key-based; no prompt). Set it in
-  `config.yaml` (`ssh_target: user@host`) or the `COXSSH_TARGET` env var.
+  `config.yaml` (`ssh_target: user@host`) or the `AGENTSSH_TARGET` env var.
 - A tmux session on the remote host (default `main`) with a window running the
   agent's TUI.
 - The helper `scripts/capture.sh` (bundled) — auto-detects the agent window.

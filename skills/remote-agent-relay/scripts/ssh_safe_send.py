@@ -7,7 +7,7 @@ the message never lands. This script base64-encodes the brief and ships it to
 the remote host, so Unicode in the brief is safe.
 
 The remote target is read from the shared config (see load_config.py):
-    ssh_target  -> env COXSSH_TARGET  >  config.yaml  >  config.example.yaml
+    ssh_target  -> env AGENTSSH_TARGET  >  config.yaml  >  config.example.yaml
 Keep plain-ASCII hyphens (-) in any inline message you type by hand; reserve
 Unicode for this scripted path.
 

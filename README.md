@@ -49,17 +49,17 @@ github_repo: your-repo
 git_credentials_file: ~/.git-credentials
 ```
 
-Precedence (highest wins): env var (`COXSSH_TARGET`, `COX_REPO_PATH`, …) →
+Precedence (highest wins): env var (`AGENTSSH_TARGET`, `AGENT_REPO_PATH`, …) →
 `config.yaml` → `config.example.yaml`. The `config.yaml` with your real values
 is **git-ignored** — never commit it.
 
 | Env var | Config key | Meaning |
 |---------|-----------|---------|
-| `COXSSH_TARGET` | `ssh_target` | `user@host` for the remote host |
-| `COX_REPO_PATH` | `repo_path` | repo path on the remote host |
-| `COX_GITHUB_OWNER` | `github_owner` | GitHub owner/org |
-| `COX_GITHUB_REPO` | `github_repo` | GitHub repo name |
-| `COX_GIT_CREDENTIALS` | `git_credentials_file` | PAT store (git credential-store format) |
+| `AGENTSSH_TARGET` | `ssh_target` | `user@host` for the remote host |
+| `AGENT_REPO_PATH` | `repo_path` | repo path on the remote host |
+| `AGENT_GITHUB_OWNER` | `github_owner` | GitHub owner/org |
+| `AGENT_GITHUB_REPO` | `github_repo` | GitHub repo name |
+| `AGENT_GIT_CREDENTIALS` | `git_credentials_file` | PAT store (git credential-store format) |
 
 ## Layout
 
