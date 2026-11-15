@@ -1,0 +1,45 @@
+# remote-agent-workflow configuration
+#
+# This is the ONE place every host-specific / project-specific value lives.
+# The skills in this repo are generic: they contain NO IPs, usernames, paths,
+# or project names. They read their config from here (or from the matching
+# environment variables, which take precedence).
+#
+# Setup (once per host that runs these skills):
+#   1. cp config.example.yaml config.yaml
+#   2. Fill in the real values for YOUR environment.
+#   3. config.yaml is local-only — it is git-ignored. Never commit it.
+#
+# Precedence (highest wins):
+#   1. Environment variable  (e.g. COXSSH_TARGET)
+#   2. config.yaml           (your filled-in local copy)
+#   3. config.example.yaml   (this file — placeholders only)
+#
+# The scripts/ helpers auto-load this file (see scripts/load_config.py).
+
+# --- Remote host the build agent runs on (the "devbox") ----------------------
+# Full ssh target: <user>@<host>. Key-based (no password prompt).
+ssh_target: "user@devbox.internal"        # e.g. dev@your-devbox-hostname
+
+# --- The project the loop builds (any git repo on the remote host) ------------
+# Absolute path of the main working tree on the remote host.
+repo_path: "~/projects/<repo>"            # e.g. ~/projects/my-app
+
+# Optional: a secondary host (e.g. a GPU/proxmox box) the ops skill may touch.
+# Only used by the relay skill's host-level notes. Blank if you don't have one.
+secondary_host: ""                        # e.g. dev@your-gpu-host (optional)
+
+# --- GitHub ------------------------------------------------------------------
+# Owner and repo the PR/merge workflow targets.
+github_owner: "<owner>"                   # e.g. your-github-login
+github_repo: "<repo>"                     # e.g. my-app
+
+# Where the GitHub credential store lives. The workflow reads a token from the
+# git credential-store file if GITHUB_TOKEN is not set. Default is the standard
+# per-user location (~/.git-credentials).
+git_credentials_file: "~/.git-credentials"
+
+# --- Local Hermes box (the box the relay skill orchestrates FROM) -------------
+# Absolute path to the Hermes state DB, used ONLY by the on-demand token/cost
+# accounting snippet (read-only). Blank if you don't need that snippet.
+hermes_state_db: ""                       # e.g. /opt/agent/state.db (optional)
