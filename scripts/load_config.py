@@ -5,7 +5,7 @@ Every skill in this repo is generic: it contains no host IPs, usernames,
 project paths, or owner names. All of those live in ONE config file.
 
 Precedence (highest wins):
-    1. Environment variable   (AGENTSSH_TARGET, COX_REPO_PATH, COX_GITHUB_OWNER, ...)
+    1. Environment variable   (AGENTSSH_TARGET, AGENT_REPO_PATH, AGENT_GITHUB_OWNER, ...)
     2. config.yaml            (your local filled-in copy, next to this file's
                                parent repo root; git-ignored)
     3. config.example.yaml    (placeholders only — the shipped default)
