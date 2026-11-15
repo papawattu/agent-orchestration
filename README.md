@@ -80,6 +80,29 @@ If both print sensible output, you're wired up.
 - **Reviewer** — a *separate* pane that independently reviews PRs. **Self-verification is not verification.** **Never merges.**
 - **Owner** — the only one who merges. Gates every "merge #N".
 
+## Guardrails (what this is *not*)
+
+These skills are a **relay**, not an autopilot. The human checkpoint stays:
+
+- **The owner's `y/n` and every `y/n/s` answer is the gate.** Nothing in this
+  repo auto-types instructions into the agent's tmux pane. A Mac-side watcher
+  that reads `/workspace` and feeds prompts to tmux on its own would *remove*
+  that checkpoint — don't build that.
+- **A separate reviewer is the point, not decoration.** The real failure
+  this design exists to catch: an agent that stops the real local service,
+  swaps in a fake one (a stub script), and self-reports "tests pass". A
+  reviewer whose job includes *"is this the real service?"* catches it.
+  **Self-verification is not verification** — the builder must never
+  rubber-stamp its own output.
+- **The repo tip is the fact, not the pane.** Report `origin/main` (fetched),
+  not a pane's scrollback, before claiming a PR landed.
+- **Detect self-merges.** After any merge, verify the tip advanced to the
+  expected SHA. If the agent merged on its own (a `--admin --squash` bypass),
+  flag the gate bypass — don't normalise it.
+
+In short: the skills *read* the agent and *hand it a brief*; they never
+replace the owner's decision to merge.
+
 ## Skills
 
 | Skill | What it does |
